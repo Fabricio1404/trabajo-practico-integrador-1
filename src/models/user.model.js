@@ -1,8 +1,9 @@
 import { DataTypes } from "sequelize";
 import { sequelize } from "../config/database.js";
 import { ProfileModel } from "./profile.model.js";
+import { ArticleModel } from "./article.model.js";
 
-// Modelo de usuario con eliminación lógica 
+// Modelo de usuario con eliminación
 export const UserModel = sequelize.define("User", {
   id: {
     type: DataTypes.INTEGER,
@@ -40,6 +41,17 @@ export const UserModel = sequelize.define("User", {
   timestamps: true,
 });
 
-// Relación 1:1 → un User tiene un Profile
+// Relación 1:1 
 UserModel.hasOne(ProfileModel, { foreignKey: "user_id", as: "profile" });
 ProfileModel.belongsTo(UserModel, { foreignKey: "user_id", as: "user" });
+
+// Relación 1:N
+UserModel.hasMany(ArticleModel, {
+  foreignKey: "user_id",
+  as: "articles",
+  onDelete: "CASCADE",   
+});
+ArticleModel.belongsTo(UserModel, {
+  foreignKey: "user_id",
+  as: "author",
+});

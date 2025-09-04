@@ -2,6 +2,7 @@ import { DataTypes } from "sequelize";
 import { sequelize } from "../config/database.js";
 import { TagModel } from "./tag.model.js";
 import { ArticleTagModel } from "./article_tag.model.js";
+import { UserModel } from "./user.model.js";
 
 export const ArticleModel = sequelize.define("Article", {
   id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
@@ -19,10 +20,29 @@ export const ArticleModel = sequelize.define("Article", {
   timestamps: true,
 });
 
-// Relación N:M con Tag 
+// N:1 
+ArticleModel.belongsTo(UserModel, {
+  foreignKey: "user_id",
+  as: "author",
+});
+
+// N:M 
 ArticleModel.belongsToMany(TagModel, {
   through: ArticleTagModel,
   foreignKey: "article_id",
   otherKey: "tag_id",
   as: "tags",
+});
+TagModel.belongsToMany(ArticleModel, {
+  through: ArticleTagModel,
+  foreignKey: "tag_id",
+  otherKey: "article_id",
+  as: "articles",
+});
+
+ArticleModel.addHook("beforeDestroy", async (article, options) => {
+  await ArticleTagModel.destroy({
+    where: { article_id: article.id },
+    transaction: options?.transaction,
+  });
 });
