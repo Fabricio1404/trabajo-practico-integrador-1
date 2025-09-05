@@ -2,6 +2,7 @@ import express from "express";
 import cookieParser from "cookie-parser";
 import dotenv from "dotenv";
 import { connectDB } from "./src/config/database.js";
+import { userRoutes } from "./src/routes/user.routes.js";
 import { authRoutes } from "./src/routes/auth.routes.js";
 
 dotenv.config();
@@ -11,6 +12,7 @@ const PORT = process.env.PORT || 3005;
 app.use(express.json());
 app.use(cookieParser());
 
+app.use("/api", userRoutes);
 app.use("/api", authRoutes);
 
 const bootstrap = async () => {
