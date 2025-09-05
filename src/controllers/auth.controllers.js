@@ -8,27 +8,28 @@ export async function register(req, res) {
   const t = await sequelize.transaction();
   try {
     const { username, email, password, first_name, last_name } = req.body;
+    const emailNorm = (email || "").toLowerCase().trim();
 
-    const exists = await UserModel.findOne({ where: { email }, transaction: t });
-    if (exists) {
+    // unicidad explícita
+    const existsByEmail = await UserModel.findOne({ where: { email: emailNorm }, transaction: t });
+    if (existsByEmail) {
       await t.rollback();
       return res.status(409).json({ message: "Email ya registrado" });
     }
-
-    const existsUser = await UserModel.findOne({ where: { username }, transaction: t });
-    if (existsUser) {
+    const existsByUsername = await UserModel.findOne({ where: { username }, transaction: t });
+    if (existsByUsername) {
       await t.rollback();
       return res.status(409).json({ message: "Username ya en uso" });
     }
 
     const hashed = await hashPassword(password);
     const user = await UserModel.create(
-      { username, email, password: hashed, role: "user" },
+      { username, email: emailNorm, password: hashed, role: "user" },
       { transaction: t }
     );
 
     await ProfileModel.create(
-      { user_id: user.id, first_name: first_name || null, last_name: last_name || null },
+      { user_id: user.id, first_name: first_name?.trim() || null, last_name: last_name?.trim() || null },
       { transaction: t }
     );
 
@@ -43,8 +44,10 @@ export async function register(req, res) {
 
 export async function login(req, res) {
   try {
-    const { email, password } = req.body;
-    const user = await UserModel.findOne({ where: { email } });
+    const emailNorm = (req.body.email || "").toLowerCase().trim();
+    const { password } = req.body;
+
+    const user = await UserModel.findOne({ where: { email: emailNorm } });
     if (!user) return res.status(401).json({ message: "Credenciales inválidas" });
 
     const ok = await comparePassword(password, user.password);
@@ -56,7 +59,7 @@ export async function login(req, res) {
     res.cookie("token", token, {
       httpOnly: true,
       sameSite: "lax",
-      secure: isProd, 
+      secure: isProd,
       maxAge: 60 * 60 * 1000, // 1h
     });
 

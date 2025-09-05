@@ -11,6 +11,8 @@ import { tagRoutes } from "./src/routes/tag.routes.js";
 import { articleRoutes } from "./src/routes/article.routes.js";
 import { articleTagRoutes } from "./src/routes/articleTag.routes.js";
 
+import "./src/models/index.js";
+
 dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3005;
@@ -41,7 +43,7 @@ app.use((err, req, res, next) => {
 const bootstrap = async () => {
   await connectDB();
   app.listen(PORT, () => {
-    console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
+    console.log(`Servidor corriendo en http://localhost:${PORT}`);
   });
 };
 

@@ -24,7 +24,13 @@ export async function createArticle(req, res) {
 
 export async function getArticles(req, res) {
   try {
-    const { q, status = "published", page = 1, limit = 20 } = req.query;
+    const { q, status = "published", page = 1, limit = 20, sort = "id:DESC" } = req.query;
+
+    const allowedSortFields = ["id", "title", "created_at", "updated_at", "status"];
+    const [fieldRaw, directionRaw] = String(sort).split(":");
+    const field = allowedSortFields.includes(fieldRaw) ? fieldRaw : "id";
+    const direction = String(directionRaw).toUpperCase() === "DESC" ? "DESC" : "ASC";
+
     const where = {};
     if (status) where.status = status;
     if (q) where.title = { [Op.like]: `%${q}%` };
@@ -37,11 +43,17 @@ export async function getArticles(req, res) {
         { model: UserModel, as: "author", attributes: ["id", "username", "email"] },
         { model: TagModel, as: "tags", attributes: ["id", "name"], through: { attributes: [] } },
       ],
-      order: [["id", "DESC"]],
+      order: [[field, direction]],
       limit: Number(limit),
       offset,
     });
-    return res.json(articles);
+
+    return res.json({
+      page: Number(page),
+      limit: Number(limit),
+      sort: `${field}:${direction}`,
+      data: articles,
+    });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ message: "Error interno del servidor" });
@@ -66,6 +78,7 @@ export async function getArticleById(req, res) {
   }
 }
 
+
 export async function getMyArticles(req, res) {
   try {
     const articles = await ArticleModel.findAll({
@@ -74,6 +87,38 @@ export async function getMyArticles(req, res) {
       order: [["id", "DESC"]],
     });
     return res.json(articles);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: "Error interno del servidor" });
+  }
+}
+
+
+export async function getArticlesByUserId(req, res) {
+  try {
+    const { id } = req.params;
+    const { page = 1, limit = 20, sort = "id:DESC" } = req.query;
+
+    const allowedSortFields = ["id", "title", "created_at", "updated_at", "status"];
+    const [fieldRaw, directionRaw] = String(sort).split(":");
+    const field = allowedSortFields.includes(fieldRaw) ? fieldRaw : "id";
+    const direction = String(directionRaw).toUpperCase() === "DESC" ? "DESC" : "ASC";
+    const offset = (Number(page) - 1) * Number(limit);
+
+    const articles = await ArticleModel.findAll({
+      where: { user_id: id },
+      include: [{ model: TagModel, as: "tags", attributes: ["id", "name"], through: { attributes: [] } }],
+      order: [[field, direction]],
+      limit: Number(limit),
+      offset,
+    });
+
+    return res.json({
+      page: Number(page),
+      limit: Number(limit),
+      sort: `${field}:${direction}`,
+      data: articles,
+    });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ message: "Error interno del servidor" });
@@ -102,14 +147,13 @@ export async function updateArticle(req, res) {
   }
 }
 
-
 export async function deleteArticle(req, res) {
   try {
     const { id } = req.params;
     const article = await ArticleModel.findByPk(id);
     if (!article) return res.status(404).json({ message: "Artículo no encontrado" });
 
-    await article.destroy(); 
+    await article.destroy();
     return res.json({ message: "Artículo eliminado" });
   } catch (err) {
     console.error(err);

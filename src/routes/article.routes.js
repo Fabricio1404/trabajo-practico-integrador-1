@@ -1,8 +1,15 @@
 import { Router } from "express";
-import { body, param, query } from "express-validator";
 import { validator } from "../middlewares/validator.js";
 import { authMiddleware } from "../middlewares/auth.middleware.js";
 import { ownerMiddleware } from "../middlewares/owner.middleware.js";
+import { adminMiddleware } from "../middlewares/admin.middleware.js";
+import {
+  createArticleValidation,
+  updateArticleValidation,
+  articleIdParam,
+  listArticlesValidation,
+  userIdParam,
+} from "../middlewares/validations/article.validation.js";
 import {
   createArticle,
   getArticles,
@@ -10,60 +17,22 @@ import {
   getMyArticles,
   updateArticle,
   deleteArticle,
+  getArticlesByUserId,
 } from "../controllers/article.controllers.js";
 import { ArticleModel } from "../models/article.model.js";
 
 export const articleRoutes = Router();
 
-articleRoutes.get(
-  "/articles",
+articleRoutes.get ("/articles",            authMiddleware, listArticlesValidation, validator, getArticles);
+articleRoutes.get ("/articles/:id",        authMiddleware, articleIdParam,        validator, getArticleById);
+articleRoutes.get ("/articles/user",       authMiddleware,                         getMyArticles);
+articleRoutes.get ("/articles/user/:id",   authMiddleware, adminMiddleware, userIdParam, validator, getArticlesByUserId);
+
+articleRoutes.post("/articles",            authMiddleware, createArticleValidation, validator, createArticle);
+
+articleRoutes.put ("/articles/:id",
   authMiddleware,
-  [
-    query("status").optional().isIn(["published", "archived"]).withMessage("status inválido"),
-    query("page").optional().isInt({ min: 1 }).toInt(),
-    query("limit").optional().isInt({ min: 1, max: 100 }).toInt(),
-  ],
-  validator,
-  getArticles
-);
-
-
-articleRoutes.get(
-  "/articles/:id",
-  authMiddleware,
-  [param("id").isInt().withMessage("id debe ser entero")],
-  validator,
-  getArticleById
-);
-
-
-articleRoutes.get("/articles/user", authMiddleware, getMyArticles);
-
-
-articleRoutes.post(
-  "/articles",
-  authMiddleware,
-  [
-    body("title").trim().isLength({ min: 3, max: 200 }).withMessage("title 3-200"),
-    body("content").isLength({ min: 50 }).withMessage("content mínimo 50"),
-    body("excerpt").optional().isLength({ max: 500 }).withMessage("excerpt ≤ 500"),
-    body("status").optional().isIn(["published", "archived"]).withMessage("status inválido"),
-  ],
-  validator,
-  createArticle
-);
-
-
-articleRoutes.put(
-  "/articles/:id",
-  authMiddleware,
-  [
-    param("id").isInt().withMessage("id debe ser entero"),
-    body("title").optional().isLength({ min: 3, max: 200 }),
-    body("content").optional().isLength({ min: 50 }),
-    body("excerpt").optional().isLength({ max: 500 }),
-    body("status").optional().isIn(["published", "archived"]),
-  ],
+  updateArticleValidation,
   validator,
   ownerMiddleware(async (req) => {
     const article = await ArticleModel.findByPk(req.params.id, { attributes: ["user_id"] });
@@ -72,11 +41,9 @@ articleRoutes.put(
   updateArticle
 );
 
-
-articleRoutes.delete(
-  "/articles/:id",
+articleRoutes.delete("/articles/:id",
   authMiddleware,
-  [param("id").isInt().withMessage("id debe ser entero")],
+  articleIdParam,
   validator,
   ownerMiddleware(async (req) => {
     const article = await ArticleModel.findByPk(req.params.id, { attributes: ["user_id"] });
