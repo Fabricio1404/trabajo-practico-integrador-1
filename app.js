@@ -21,6 +21,15 @@ app.use("/api", authRoutes);
 app.use("/api", tagRoutes);
 app.use("/api", articleTagRoutes);
 
+// Handler de errores central 
+app.use((err, req, res, next) => {
+  console.error(err);
+  if (res.headersSent) return next(err);
+  const status = err.status || 500;
+  const message = err.message || "Internal Server Error";
+  res.status(status).json({ message });
+});
+
 const bootstrap = async () => {
   await connectDB();
   app.listen(PORT, () => {
@@ -28,4 +37,6 @@ const bootstrap = async () => {
   });
 };
 
+
 bootstrap();
+ 
