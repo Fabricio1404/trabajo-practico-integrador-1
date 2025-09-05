@@ -9,12 +9,12 @@ export async function register(req, res) {
   try {
     const { username, email, password, first_name, last_name } = req.body;
 
-    // unicidad básica
     const exists = await UserModel.findOne({ where: { email }, transaction: t });
     if (exists) {
       await t.rollback();
       return res.status(409).json({ message: "Email ya registrado" });
     }
+
     const existsUser = await UserModel.findOne({ where: { username }, transaction: t });
     if (existsUser) {
       await t.rollback();
@@ -44,21 +44,19 @@ export async function register(req, res) {
 export async function login(req, res) {
   try {
     const { email, password } = req.body;
-
-    
     const user = await UserModel.findOne({ where: { email } });
     if (!user) return res.status(401).json({ message: "Credenciales inválidas" });
 
     const ok = await comparePassword(password, user.password);
     if (!ok) return res.status(401).json({ message: "Credenciales inválidas" });
 
-    const token = signToken({ id: user.id, role: user.role }); 
+    const token = signToken({ id: user.id, role: user.role });
 
-   
+    const isProd = process.env.NODE_ENV === "production";
     res.cookie("token", token, {
       httpOnly: true,
       sameSite: "lax",
-     
+      secure: isProd, 
       maxAge: 60 * 60 * 1000, // 1h
     });
 
