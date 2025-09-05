@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import { connectDB } from "./src/config/database.js";
 import { userRoutes } from "./src/routes/user.routes.js";
 import { authRoutes } from "./src/routes/auth.routes.js";
+import { tagRoutes } from "./src/routes/tag.routes.js";
 
 dotenv.config();
 const app = express();
@@ -14,6 +15,7 @@ app.use(cookieParser());
 
 app.use("/api", userRoutes);
 app.use("/api", authRoutes);
+app.use("/api", tagRoutes);
 
 const bootstrap = async () => {
   await connectDB();
